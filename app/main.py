@@ -9,9 +9,10 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 
 
 app = FastAPI()
-app.get("/")
+@app.get("/")
 def root():
     return {"status": "running"}
+
 
 @app.post("/chat")
 def chat(message: str):
