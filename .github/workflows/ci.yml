@@ -24,10 +24,10 @@ jobs:
       # Instala o uv
       - name: Setup uv
         uses: astral-sh/setup-uv@v1
-        with:
-          # Pré-instala o ruff para ser super rápido
-          uv-version: ">=0.1.18" # Garante versão recente
-          tools: "ruff"
+    
+      # Instala o ruff
+      - name: Install Ruff
+        run: uv pip install --system ruff
 
       # Roda o lint e o format check
       - name: Run Ruff
@@ -71,6 +71,8 @@ jobs:
       # Roda os testes com pytest
       - name: Run Pytest
         run: pytest
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
 
   #---------------------------------------
   # Job 3: Build do Docker
