@@ -39,13 +39,13 @@ jobs:
   # Job 2: Testes (usando uv)
   #---------------------------------------
   test:
-    name: 🧪 Test
+    name: Test
     runs-on: ubuntu-latest
     
     # Roda os testes em múltiplas versões do Python
     strategy:
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.14"]
 
     steps:
       # Baixa o código
