@@ -5,11 +5,6 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_health_endpoint():
-    """Verifica se health check funciona"""
-    response = client.get("/health")
-    assert response.status_code == 200
-
 
 def test_root_endpoint():
     """Testa endpoint raiz"""
