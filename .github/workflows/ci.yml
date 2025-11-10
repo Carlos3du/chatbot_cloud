@@ -1,11 +1,12 @@
 # Nome do workflow
 name: CI
 
-# Gatilhos: rodar em push para a 'main' e em qualquer Pull Request
+# Gatilhos: rodar em push para qualquer branch e em PRs
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
+    branches: [ "main" ]
 
 # Permite que os jobs rodem em paralelo
 jobs:
@@ -57,7 +58,6 @@ jobs:
       # Instala o uv
       - name: Setup uv
         uses: astral-sh/setup-uv@v1
-
 
       # Instala as dependências com uv
       - name: Install dependencies

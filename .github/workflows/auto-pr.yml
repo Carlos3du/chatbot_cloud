@@ -1,0 +1,59 @@
+name: Auto Create PR
+
+on:
+  workflow_run:
+    workflows: ["CI"]  
+    types:
+      - completed
+    branches: [ "dev" ]
+
+jobs:
+  auto-pr:
+    name: Create Pull Request
+    runs-on: ubuntu-latest
+    # Só roda se o CI passou
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Check if PR exists
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_COUNT=$(gh pr list --base main --head dev --state open --json number --jq 'length')
+          echo "exists=$([[ $PR_COUNT -gt 0 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head dev \
+            --title "🚀 Deploy from dev to main" \
+            --body "## ✅ CI Passou com Sucesso!
+
+
+          ### 📊 Status dos Jobs
+          - ✅ Lint com Ruff
+          - ✅ Testes com Pytest
+          - ✅ Build do Docker
+
+          ### 📝 Últimos Commits
+          \`\`\`
+          $(git log main..dev --oneline --no-merges | head -5)
+          \`\`\`
+
+          ### 🔗 Workflow Run
+          [Ver detalhes do CI](${{ github.event.workflow_run.html_url }})
+
+          ---
+          _Auto-generated • Workflow: ${{ github.event.workflow_run.name }} • Run ID: ${{ github.event.workflow_run.id }}_" \
+            --label "auto-pr,ci-passed"
