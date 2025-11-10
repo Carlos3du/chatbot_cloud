@@ -1,14 +1,17 @@
-from fastapi import FastAPI, HTTPException
+import os
+
 import google.generativeai as genai
 from dotenv import load_dotenv
-import os
+from fastapi import FastAPI, HTTPException
 
 load_dotenv()
 genai.configure(api_key=os.getenv("API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel("gemini-2.5-flash")
 
 
 app = FastAPI()
+
+
 @app.get("/")
 def root():
     return {"status": "running"}

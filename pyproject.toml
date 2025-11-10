@@ -8,7 +8,31 @@ dependencies = [
     "fastapi>=0.121.1",
     "generativeai>=0.0.1",
     "google-generativeai>=0.8.5",
+    "httpx>=0.28.1",
+    "pytest>=9.0.0",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
+    "ruff>=0.14.4",
     "uvicorn[standard]>=0.38.0",
 ]
+
+# Configure o Ruff
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# Configure o Pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+pythonpath = ["."] 

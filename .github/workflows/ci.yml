@@ -62,19 +62,11 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v1
 
-      # Cache das dependências do uv
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
 
       # Instala as dependências com uv
       - name: Install dependencies
         run: |
-          # Assumindo que você tem um requirements.txt
-          # Se usar pyproject.toml, mude para: uv pip install -e .[test]
-          uv pip install -r requirements.txt
+          uv pip install -e .[test]
 
       # Roda os testes com pytest
       - name: Run Pytest
@@ -84,7 +76,7 @@ jobs:
   # Job 3: Build do Docker
   #---------------------------------------
   build-docker:
-    name: 🐳 Build Docker
+    name: Build Docker
     runs-on: ubuntu-latest
     steps:
       # Baixa o código
