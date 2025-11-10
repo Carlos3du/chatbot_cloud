@@ -7,6 +7,10 @@ on:
       - completed
     branches: [ "dev" ]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   auto-pr:
     name: Create Pull Request
@@ -21,6 +25,10 @@ jobs:
           ref: dev
           fetch-depth: 0
 
+      - name: Fetch all branches
+        run: |
+          git fetch --all
+
       - name: Check if PR exists
         id: check
         env:
@@ -34,12 +42,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Busca diferenças entre main e dev
+          COMMITS=$(git log origin/main..origin/dev --oneline --no-merges | head -5 || echo "Nenhum commit novo")
+          
           gh pr create \
             --base main \
             --head dev \
             --title "🚀 Deploy from dev to main" \
             --body "## ✅ CI Passou com Sucesso!
 
+          Este PR foi criado automaticamente porque todos os checks do CI passaram.
 
           ### 📊 Status dos Jobs
           - ✅ Lint com Ruff
@@ -48,12 +60,11 @@ jobs:
 
           ### 📝 Últimos Commits
           \`\`\`
-          $(git log main..dev --oneline --no-merges | head -5)
+          $COMMITS
           \`\`\`
 
           ### 🔗 Workflow Run
           [Ver detalhes do CI](${{ github.event.workflow_run.html_url }})
 
           ---
-          _Auto-generated • Workflow: ${{ github.event.workflow_run.name }} • Run ID: ${{ github.event.workflow_run.id }}_" \
-            --label "auto-pr,ci-passed"
+          _Auto-generated • Workflow: ${{ github.event.workflow_run.name }} • Run ID: ${{ github.event.workflow_run.id }}_"
