@@ -1,0 +1,122 @@
+# Nome do workflow
+name: CI
+
+# Gatilhos: rodar em push para a 'main' e em qualquer Pull Request
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+# Permite que os jobs rodem em paralelo
+jobs:
+
+  #---------------------------------------
+  # Job 1: Lint com Ruff (usando uv)
+  #---------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      # Baixa o código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Instala o uv
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          # Pré-instala o ruff para ser super rápido
+          uv-version: ">=0.1.18" # Garante versão recente
+          tools: "ruff"
+
+      # Roda o lint e o format check
+      - name: Run Ruff
+        run: |
+          ruff check .
+          ruff format --check .
+
+  #---------------------------------------
+  # Job 2: Testes (usando uv)
+  #---------------------------------------
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    
+    # Roda os testes em múltiplas versões do Python
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      # Baixa o código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Configura a versão do Python da matrix
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Instala o uv
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v1
+
+      # Cache das dependências do uv
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+
+      # Instala as dependências com uv
+      - name: Install dependencies
+        run: |
+          # Assumindo que você tem um requirements.txt
+          # Se usar pyproject.toml, mude para: uv pip install -e .[test]
+          uv pip install -r requirements.txt
+
+      # Roda os testes com pytest
+      - name: Run Pytest
+        run: pytest
+
+  #---------------------------------------
+  # Job 3: Build do Docker
+  #---------------------------------------
+  build-docker:
+    name: 🐳 Build Docker
+    runs-on: ubuntu-latest
+    steps:
+      # Baixa o código
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Configura o Buildx (necessário para caching)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Cache das camadas do Docker (acelera builds futuros)
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      # Roda o build (sem "push", apenas "load")
+      - name: Build and load Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false  # Não faz push no PR
+          load: true   # Apenas constrói a imagem
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          
+      # Move o cache novo para o lugar do antigo
+      - name: Move Docker cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
