@@ -1,0 +1,62 @@
+name: Auto Merge to Production
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [staging]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge-production:
+    name: Merge Staging to Production
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge staging to production
+        run: |
+          # Fetch todas as branches
+          git fetch origin
+          
+          # Checkout production (cria se não existir)
+          git checkout production 2>/dev/null || git checkout -b production origin/staging
+          
+          # Pull últimas alterações
+          git pull origin production --allow-unrelated-histories || true
+          
+          # Merge staging em production
+          git merge origin/staging --no-ff -m "chore: release to production from staging [skip ci]" || {
+            echo "❌ Conflito de merge detectado!"
+            exit 1
+          }
+          
+          # Push para production
+          git push origin production
+          
+      - name: Create Release Tag
+        run: |
+          # Cria tag de release
+          VERSION=$(date +"%Y.%m.%d-%H%M")
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"
+          echo "✅ Tag de release criada: v${VERSION}"
+          
+      - name: Notify success
+        run: |
+          echo "✅ Staging mergeada em production com sucesso!"
+          echo "🚀 Deploy para produção será iniciado automaticamente..."
+          echo "📌 Verifique o Railway Dashboard para acompanhar o deploy"
