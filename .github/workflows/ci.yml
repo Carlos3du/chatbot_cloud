@@ -25,15 +25,11 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v1
     
-      # Instala o ruff
-      - name: Install Ruff
-        run: uv pip install --system ruff
-
       # Roda o lint e o format check
       - name: Run Ruff
         run: |
-          ruff check .
-          ruff format --check .
+          uvx ruff check .
+          uvx ruff format --check .
 
   #---------------------------------------
   # Job 2: Testes (usando uv)
@@ -65,12 +61,11 @@ jobs:
 
       # Instala as dependências com uv
       - name: Install dependencies
-        run: |
-          uv pip install --system -e .[test]
+        run: uv sync
 
       # Roda os testes com pytest
       - name: Run Pytest
-        run: pytest
+        run: uv run pytest
         env:
           API_KEY: ${{ secrets.API_KEY }}
 
