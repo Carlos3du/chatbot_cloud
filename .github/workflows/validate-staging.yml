@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   integration-tests:
-    name: Run Integration Tests
+    name: Run Integration Tests on Staging
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     
@@ -40,16 +40,16 @@ jobs:
         env:
           API_KEY: ${{ secrets.API_KEY }}
         run: |
-          echo "🧪 Executando testes de integração com TestClient..."
+          echo "Executando testes de integração em staging..."
           uv run pytest tests/integration/ -v --tb=short --cov=app --cov-report=term-missing
 
-      - name: Smoke Test on Real Staging (Optional)
+      - name: Smoke Test on Real Staging
         if: success()
         env:
           STAGING_URL: ${{ secrets.STAGING_URL }}
         run: |
-          echo "💨 Smoke test rápido no ambiente real..."
-          curl -f ${STAGING_URL}/health || echo "⚠️ Staging URL não respondeu"
+          echo "💨Smoke test no ambiente staging..."
+          curl -f ${STAGING_URL}/chat || echo "⚠️ Staging URL não respondeu"
 
       - name: Generate Coverage Report
         if: always()
@@ -60,14 +60,8 @@ jobs:
       - name: Notify Success
         if: success()
         run: |
-          echo "✅ Todas as validações passaram!"
-          echo "🚀 Código validado e pronto para produção"
-
-      - name: Notify Failure
-        if: failure()
-        run: |
-          echo "❌ Validação FALHOU!"
-          echo "🔧 Verifique os logs acima"
+          echo "✅ Staging validado com sucesso!"
+          echo "🚀 Pronto para criar PR staging → main (production)"
 
       - name: Create Issue on Failure
         if: failure()
@@ -77,8 +71,8 @@ jobs:
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '🚨 Falha nos Testes de Integração - Staging',
-              body: `## ❌ Testes de Integração Falharam
+              title: '🚨 Falha na Validação do Staging',
+              body: `## ❌ Validação do Staging Falhou
               
               **Branch:** staging
               **Workflow:** ${context.workflow}
@@ -87,16 +81,15 @@ jobs:
               ### 🔍 Ações necessárias:
               1. Verificar logs do workflow
               2. Executar testes localmente: \`uv run pytest tests/integration/ -v\`
-              3. Corrigir problemas identificados
-              4. Fazer commit e push para staging
+              3. Corrigir problemas
+              4. Fazer novo commit em dev
               
               ### 📋 Comandos úteis:
               \`\`\`bash
-              # Rodar testes localmente
-              export API_KEY="your-key"
+              git checkout staging
               uv sync
               uv run pytest tests/integration/ -v --tb=short
               \`\`\`
               `,
-              labels: ['bug', 'staging', 'integration-tests', 'ci-failed']
+              labels: ['bug', 'staging', 'validation-failed']
             })

@@ -3,6 +3,7 @@ name: Deploy to Staging
 on:
   push:
     branches: [staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -18,13 +19,21 @@ jobs:
         with:
           ref: staging
 
-      - name: Deploy to Railway
+      - name: Deploy to Railway Staging
         uses: bervProject/railway-deploy@main
         with:
           railway_token: ${{ secrets.RAILWAY_TOKEN }}
           service: ${{ secrets.RAILWAY_SERVICE_STAGING }}
-        
-      - name: Notify deployment success
+
+      - name: Notify Success
+        if: success()
         run: |
-          echo "✅ Deploy para staging concluído com sucesso!"
-          echo "🔗 Confira os logs no Railway Dashboard"
+          echo "🚀 Deploy em STAGING concluído!"
+          echo "🔗 URL: ${{ secrets.STAGING_URL }}"
+          echo "📋 Validação será executada automaticamente"
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Deploy em staging falhou!"
+          echo "🔧 Verifique os logs do Railway"
