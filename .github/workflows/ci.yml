@@ -1,111 +1,59 @@
-# Nome do workflow
-name: CI
+name: CI Pipeline
 
-# Gatilhos: rodar em push para qualquer branch e em PRs
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: [dev, main]
   pull_request:
-    branches: [ "main" ]
+    branches: [dev, main]
 
-# Permite que os jobs rodem em paralelo
+permissions:
+  contents: read
+
 jobs:
-
-  #---------------------------------------
-  # Job 1: Lint com Ruff (usando uv)
-  #---------------------------------------
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      # Baixa o código
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Instala o uv
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v1
-    
-      # Roda o lint e o format check
-      - name: Run Ruff
-        run: |
-          uvx ruff check .
-          uvx ruff format --check .
-
-  #---------------------------------------
-  # Job 2: Testes (usando uv)
-  #---------------------------------------
   test:
-    name: Test
+    name: Test and Build
     runs-on: ubuntu-latest
     
-    # Roda os testes em múltiplas versões do Python
-    strategy:
-      matrix:
-        python-version: ["3.14"]
-
     steps:
-      # Baixa o código
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Configura a versão do Python da matrix
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.11'
 
-      # Instala o uv
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v1
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
-      # Instala as dependências com uv
-      - name: Install dependencies
-        run: uv sync
+      - name: Install dependencies with UV
+        run: |
+          uv sync --frozen
 
-      # Roda os testes com pytest
-      - name: Run Pytest
-        run: uv run pytest
+      - name: Run Ruff Linter
+        run: |
+          uv run ruff check .
+
+      - name: Run Tests
         env:
           API_KEY: ${{ secrets.API_KEY }}
-
-  #---------------------------------------
-  # Job 3: Build do Docker
-  #---------------------------------------
-  build-docker:
-    name: Build Docker
-    runs-on: ubuntu-latest
-    steps:
-      # Baixa o código
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # Configura o Buildx (necessário para caching)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Cache das camadas do Docker (acelera builds futuros)
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      # Roda o build (sem "push", apenas "load")
-      - name: Build and load Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false  # Não faz push no PR
-          load: true   # Apenas constrói a imagem
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-          
-      # Move o cache novo para o lugar do antigo
-      - name: Move Docker cache
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          uv run pytest tests/ -v
+
+      - name: Build Docker Image
+        run: |
+          docker build -t chatbot-cloud:test .
+
+      - name: Verify Docker Build
+        run: |
+          docker images chatbot-cloud:test
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ CI Pipeline passou com sucesso!"
+          echo "📦 Todos os testes passaram"
+          echo "🐳 Build Docker concluído"
