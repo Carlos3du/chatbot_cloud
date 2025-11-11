@@ -22,14 +22,16 @@ jobs:
         with:
           ref: staging
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
       - name: Install UV
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python
-        run: uv python install 3.14
 
       - name: Install dependencies with UV
         run: uv sync --frozen
@@ -41,18 +43,31 @@ jobs:
           echo "🧪 Executando testes de integração com TestClient..."
           uv run pytest tests/integration/ -v --tb=short --cov=app --cov-report=term-missing
 
-  
+      - name: Smoke Test on Real Staging (Optional)
+        if: success()
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+        run: |
+          echo "💨 Smoke test rápido no ambiente real..."
+          curl -f ${STAGING_URL}/health || echo "⚠️ Staging URL não respondeu"
+
+      - name: Generate Coverage Report
+        if: always()
+        run: |
+          echo "📊 Relatório de Cobertura:"
+          uv run coverage report
+
       - name: Notify Success
         if: success()
         run: |
-          echo "Todas as validações passaram!"
-          echo "Código validado e pronto para produção"
+          echo "✅ Todas as validações passaram!"
+          echo "🚀 Código validado e pronto para produção"
 
       - name: Notify Failure
         if: failure()
         run: |
-          echo "Validação FALHOU!"
-          echo "Verifique os logs acima"
+          echo "❌ Validação FALHOU!"
+          echo "🔧 Verifique os logs acima"
 
       - name: Create Issue on Failure
         if: failure()
