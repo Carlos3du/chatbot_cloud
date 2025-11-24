@@ -25,3 +25,12 @@ jobs:
         run: |
           echo "✅ Deploy iniciado com sucesso no Railway!"
           echo "🔗 Acompanhe em: https://railway.app"
+
+  call-validation:
+    name: Trigger Validation
+    needs: deploy
+    if: success()
+    uses: ./.github/workflows/4_validation_production.yml
+    secrets:
+      STAGING_URL: ${{ secrets.STAGING_URL }}
+      RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
