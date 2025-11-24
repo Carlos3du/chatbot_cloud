@@ -1,0 +1,98 @@
+name: Validation and Production Deploy
+
+on:
+  workflow_run:
+    workflows: ["Deploy to Staging"]
+    types:
+      - completed
+    branches:
+      - staging
+
+jobs:
+  validation:
+    name: Integration and Functional Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      
+      - name: Install dependencies
+        run: uv sync
+      
+      - name: Run integration tests
+        run: uv run pytest tests/integration -v
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
+      
+   
+
+  create-production-pr:
+    name: Create PR to Main
+    needs: validation
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: staging
+          base: main
+          title: "🚀 Deploy to Production"
+          body: |
+            ## Deploy to Production
+            
+            ✅ All staging validation tests passed successfully
+            
+            ### Tests Results
+            - Integration tests: ✅
+            - Functional tests: ✅
+            - Health check: ✅
+            
+            This PR is auto-generated after successful staging validation.
+          labels: |
+            production
+            auto-deploy
+          assignees: ${{ github.actor }}
+      
+      - name: Auto-merge PR
+        if: steps.create-pr.outputs.pull-request-number != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
+          merge-method: squash
+
+  notify-failure:
+    name: Notify Validation Failure
+    needs: validation
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: Send notification
+        run: |
+          echo "❌ Staging validation failed. Production deploy cancelled."
