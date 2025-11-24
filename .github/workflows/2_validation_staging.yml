@@ -58,24 +58,33 @@ jobs:
           echo "✅ Verificando build Docker..."
           docker images chatbot-cloud:staging
 
-      - name: Auto-merge PR
+      - name: Enable Auto-merge
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "🎉 Todos os testes passaram! Fazendo merge automático..."
+          echo "✅ Todos os testes passaram! Habilitando merge automático após aprovação..."
           gh pr merge ${{ github.event.pull_request.number }} \
-            --merge \
             --auto \
+            --merge \
             --subject "✅ Auto-merge: Dev -> Staging (validado automaticamente)"
 
-      - name: Notify Success
+      - name: Add Success Comment
         if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "✅ Validation Pipeline concluído com sucesso!"
-          echo "🔀 Merge automático realizado: dev -> staging"
-          echo "📦 Todos os testes passaram"
-          echo "🐳 Build Docker verificado"
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "✅ **Validação Concluída com Sucesso**
+            
+            Todas as validações passaram:
+            - ✅ Ruff Linter
+            - ✅ Testes CI
+            - ✅ Build Docker
+            
+            **Próximo passo:**
+            - Aguardando aprovação manual do PR
+            - Após aprovação, o merge será realizado automaticamente"
 
       - name: Notify Failure
         if: failure()
