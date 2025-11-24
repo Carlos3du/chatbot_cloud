@@ -58,7 +58,7 @@ jobs:
           gh pr create \
             --base main \
             --head staging \
-            --title "🚀 Merge to Main" \
+            --title "🚀 Auto PR: Staging -> Main" \
             --body "## Merge to Main
             
             ✅ All staging validation tests passed successfully
