@@ -37,7 +37,7 @@ jobs:
       - name: Run Tests
         env:
           API_KEY: ${{ secrets.API_KEY }}
-        run: uv run pytest tests/ -v
+        run: uv run pytest tests/ci/ -v
 
       - name: Build Docker Image
         run: docker build -t chatbot-cloud:test .

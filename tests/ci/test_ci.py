@@ -6,12 +6,14 @@ client = TestClient(app)
 
 
 def test_root_endpoint():
-    """Testa o endpoint raiz"""
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
     assert "status" in data
 
+def test_docs_endpoint():
+    response = client.get("/docs")
+    assert response.status_code == 200
 
 def test_chat_endpoint_missing_message():
     response = client.post("/chat", params={"message": ""})
