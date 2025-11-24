@@ -1,24 +1,21 @@
 name: Validation & Production Merge
 
 on:
-  workflow_run:
-    workflows: ["Deploy to Staging"]
-    types:
-      - completed
-    branches:
-      - staging
+  workflow_call:
+    secrets:
+      STAGING_URL:
+        required: true
+      RAILWAY_SERVICE_STAGING:
+        required: true
 
 jobs:
   validation:
     name: Integration and Functional Tests
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
       
       - name: Set up Python
         uses: actions/setup-python@v5
