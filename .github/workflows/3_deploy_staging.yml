@@ -1,4 +1,4 @@
-name: Deploy to Railway Staging
+name: Deploy to Staging
 
 on:
   push:
