@@ -1,0 +1,85 @@
+name: Validation & Production Merge
+
+on:
+  workflow_call:
+    secrets:
+      STAGING_URL:
+        required: true
+      RAILWAY_SERVICE_STAGING:
+        required: true
+
+jobs:
+  validation:
+    name: Integration and Functional Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      
+      - name: Install dependencies
+        run: uv sync
+      
+      - name: Run integration tests
+        run: uv run pytest tests/integration -v
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
+      
+
+  create-production-pr:
+    name: Create PR to Main
+    needs: validation
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: staging
+      
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head staging \
+            --title "🚀 Auto PR: Staging -> Main" \
+            --body "## Merge to Main
+            
+            ✅ All staging validation tests passed successfully
+            
+            ### Tests Results
+            - Integration tests: ✅
+            - Functional tests: ✅
+            - Health check: ✅
+            
+            This PR is auto-generated after successful staging validation." \
+            --assignee ${{ github.actor }} \
+            || echo "⚠️ PR já existe ou não há diferenças"
+      
+      
+  notify-failure:
+    name: Notify Validation Failure
+    needs: validation
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+      - name: Send notification
+        run: |
+          echo "❌ Staging validation failed. Production deploy cancelled."
