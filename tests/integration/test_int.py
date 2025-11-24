@@ -1,5 +1,6 @@
-import os, httpx
+import os
 
+import httpx
 
 STAGING_URL = os.getenv("STAGING_URL")
 client = httpx.Client(base_url=STAGING_URL)
