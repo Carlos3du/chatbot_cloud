@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,22 +49,24 @@ jobs:
 
       - name: Create Pull Request to Staging
         if: success() && github.ref == 'refs/heads/dev' && github.event_name == 'push'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: dev
-          base: staging
-          title: "🚀 Auto PR: Dev -> Staging"
-          body: |
-            ## Automated Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base staging \
+            --head dev \
+            --title "🚀 Auto PR: Dev -> Staging" \
+            --body "## Automated Pull Request
             
-            ✅ CI Pipeline passou com sucesso na branch `dev`
+            ✅ CI Pipeline passou com sucesso na branch \`dev\`
             📦 Todos os testes passaram
             🐳 Build Docker concluído
             
-            **Commits incluídos:**
-            ${{ github.event.head_commit.message }}
-          labels: automated, staging
+            **Último commit:**
+            \`${{ github.event.head_commit.message }}\`
+            
+            **SHA:** ${{ github.sha }}" \
+            --label automated,staging || echo "⚠️ PR já existe ou não há diferenças entre dev e staging"
 
       - name: Notify Success
         if: success()
