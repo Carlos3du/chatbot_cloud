@@ -3,7 +3,7 @@ import os
 import httpx
 
 STAGING_URL = os.getenv("STAGING_URL")
-client = httpx.Client(base_url=STAGING_URL)
+client = httpx.Client(base_url=STAGING_URL, timeout=60.0)
 
 
 def test_chat_message():
