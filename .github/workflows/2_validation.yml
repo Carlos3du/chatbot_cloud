@@ -1,0 +1,96 @@
+name: Validation & Merge Staging 
+
+on:
+  pull_request_review:
+    types: [submitted]
+    branches: [staging]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate-and-merge:
+    name: Validate and Auto-merge
+    runs-on: ubuntu-latest
+    if: |
+      github.event.review.state == 'approved' && 
+      github.event.pull_request.head.ref == 'dev' &&
+      github.event.pull_request.base.ref == 'staging'
+    
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies with UV
+        run: uv sync --frozen
+
+      - name: Run Ruff Linter
+        run: |
+          echo "🔍 Executando Ruff Linter..."
+          uv run ruff check .
+
+      - name: Run CI Tests
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          echo "🧪 Executando testes de CI..."
+          uv run pytest tests/ci/ -v
+
+      - name: Build Docker Image
+        run: |
+          echo "🐳 Construindo imagem Docker..."
+          docker build -t chatbot-cloud:staging .
+
+      - name: Verify Docker Build
+        run: |
+          echo "✅ Verificando build Docker..."
+          docker images chatbot-cloud:staging
+
+      - name: Auto-merge PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🎉 Todos os testes passaram! Fazendo merge automático..."
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --merge \
+            --admin \
+            --subject "✅ Auto-merge: Dev -> Staging (aprovado e validado)"
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ Validation Pipeline concluído com sucesso!"
+          echo "🔀 Merge automático realizado: dev -> staging"
+          echo "📦 Todos os testes passaram"
+          echo "🐳 Build Docker verificado"
+
+      - name: Notify Failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "❌ **Validação Falhou**
+            
+            A validação automática após aprovação falhou. Por favor, verifique os logs do workflow.
+            
+            **Ações necessárias:**
+            - Verifique os erros nos testes
+            - Corrija os problemas identificados
+            - Solicite nova aprovação após correções"
