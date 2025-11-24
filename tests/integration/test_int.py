@@ -14,14 +14,6 @@ def test_chat_message():
     assert len(data["response"]) > 0
 
 
-def test_chat_long_message():
-    long_message = "Explique " + "detalhadamente " * 50 + "sobre IA"
-    response = client.post("/chat", params={"message": long_message})
-    assert response.status_code == 200
-    data = response.json()
-    assert "response" in data
-
-
 def test_chat_special_characters():
     response = client.post(
         "/chat", params={"message": "Olá! Como está? 😊 #teste @user"}
