@@ -61,9 +61,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: staging
           base: main
-          title: "🚀 Deploy to Production"
+          title: "🚀 Merge to Main"
           body: |
-            ## Deploy to Production
+            ## Merge to Main
             
             ✅ All staging validation tests passed successfully
             
@@ -73,19 +73,9 @@ jobs:
             - Health check: ✅
             
             This PR is auto-generated after successful staging validation.
-          labels: |
-            production
-            auto-deploy
           assignees: ${{ github.actor }}
       
-      - name: Auto-merge PR
-        if: steps.create-pr.outputs.pull-request-number != ''
-        uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ steps.create-pr.outputs.pull-request-number }}
-          merge-method: squash
-
+      
   notify-failure:
     name: Notify Validation Failure
     needs: validation
