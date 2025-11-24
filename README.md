@@ -2,3 +2,4 @@
 Projeto da faculdade de cloud
 - teste ci
 - teste staging
+- teste deploy staging
