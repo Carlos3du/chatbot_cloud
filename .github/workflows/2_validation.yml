@@ -1,22 +1,20 @@
 name: Validation & Merge Staging 
 
 on:
-  pull_request_review:
-    types: [submitted]
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches: [staging]
 
 permissions:
   contents: write
   pull-requests: write
+  checks: write
 
 jobs:
   validate-and-merge:
     name: Validate and Auto-merge
     runs-on: ubuntu-latest
-    if: |
-      github.event.review.state == 'approved' && 
-      github.event.pull_request.head.ref == 'dev' &&
-      github.event.pull_request.base.ref == 'staging'
+    if: github.event.pull_request.head.ref == 'dev'
     
     steps:
       - name: Checkout PR code
@@ -69,8 +67,8 @@ jobs:
           echo "🎉 Todos os testes passaram! Fazendo merge automático..."
           gh pr merge ${{ github.event.pull_request.number }} \
             --merge \
-            --admin \
-            --subject "✅ Auto-merge: Dev -> Staging (aprovado e validado)"
+            --auto \
+            --subject "✅ Auto-merge: Dev -> Staging (validado automaticamente)"
 
       - name: Notify Success
         if: success()
@@ -88,9 +86,9 @@ jobs:
           gh pr comment ${{ github.event.pull_request.number }} \
             --body "❌ **Validação Falhou**
             
-            A validação automática após aprovação falhou. Por favor, verifique os logs do workflow.
+            A validação automática falhou. O merge não será realizado até que os problemas sejam corrigidos.
             
             **Ações necessárias:**
-            - Verifique os erros nos testes
-            - Corrija os problemas identificados
-            - Solicite nova aprovação após correções"
+            - Verifique os erros nos testes no workflow
+            - Corrija os problemas identificados na branch dev
+            - Push das correções acionará nova validação automática"
