@@ -1,41 +1,54 @@
 name: Validation & Production Merge
 
 on:
-  workflow_call:
-    secrets:
-      STAGING_URL:
-        required: true
-      RAILWAY_SERVICE_STAGING:
-        required: true
+  pull_request:
+    branches: [main]
+  
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
 
 jobs:
   validation:
     name: Integration and Functional Tests
     runs-on: ubuntu-latest
     
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
       
+      # 1. Padronização Python 3.12
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
       
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+          cache-dependency-glob: "uv.lock"
       
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --frozen
       
+      # 2. Testes de Integração contra o ambiente de Staging REAL
       - name: Run integration tests
-        run: uv run pytest tests/integration -v
         env:
+          # URLs e Chaves necessárias para bater na API de Staging
           STAGING_URL: ${{ secrets.STAGING_URL }}
           RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
-      
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          echo "🧪 Iniciando testes de integração contra Staging..."
+          # Assume que seus testes de integração usam requests para a URL externa
+          uv run pytest tests/integration -v
 
   create-production-pr:
     name: Create PR to Main
@@ -47,39 +60,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
           ref: staging
+          fetch-depth: 0
       
-      - name: Create Pull Request
+      - name: Create Pull Request (Staging -> Main)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "🚀 Testes de integração passaram. Criando PR para Produção..."
           gh pr create \
             --base main \
             --head staging \
-            --title "🚀 Auto PR: Staging -> Main" \
-            --body "## Merge to Main
+            --title "🚀 Auto PR: Staging -> Main (Deploy Validado)" \
+            --body "## 🚢 Merge to Production (Main)
             
-            ✅ All staging validation tests passed successfully
+            ✅ **Ciclo de Validação de Staging Completo**
             
-            ### Tests Results
-            - Integration tests: ✅
-            - Functional tests: ✅
-            - Health check: ✅
+            Este PR foi gerado automaticamente após:
+            1. Deploy automático em Staging (Sucesso)
+            2. Testes de Integração na API rodando (Sucesso)
             
-            This PR is auto-generated after successful staging validation." \
+            ### 📊 Resultados dos Testes
+            - Integração: ✅ Passou
+            - Deploy Staging: ✅ Estável
+            
+            **Próximo Passo:**
+            - Revisão Humana Obrigatória
+            - Merge para iniciar Deploy em Produção" \
             --assignee ${{ github.actor }} \
-            || echo "⚠️ PR já existe ou não há diferenças"
-      
+            || echo "⚠️ Aviso: Um PR de staging para main já existe. Nenhuma ação necessária."
       
   notify-failure:
     name: Notify Validation Failure
-    needs: validation
+    needs: [validation]
     runs-on: ubuntu-latest
     if: failure()
     
     steps:
       - name: Send notification
         run: |
-          echo "❌ Staging validation failed. Production deploy cancelled."
+          echo "❌ FALHA CRÍTICA: A validação do ambiente de Staging falhou."
+          echo "O Deploy para Produção foi cancelado/bloqueado."
+          # Aqui você poderia adicionar notificação para Slack/Discord/Email

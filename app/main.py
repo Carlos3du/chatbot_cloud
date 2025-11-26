@@ -9,7 +9,6 @@ genai.configure(api_key=os.getenv("API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 #TODO: Organizar melhor o conteúdo do prompt, visto que é apenas de estudo
-#TODO: Adaptar o workflow para utilizar uma imagem docker em cada branch
 
 app = FastAPI()
 
