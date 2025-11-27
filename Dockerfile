@@ -34,17 +34,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# REMOVIDO: Criação de usuário appuser e ajustes de permissão complexos.
-# Rodaremos como ROOT para garantir acesso total aos arquivos e evitar "Permission denied".
-
 # Copiar o ambiente virtual do estágio builder
 COPY --from=builder /app/.venv /app/.venv
 
 # Copiar o código da aplicação
 COPY ./app ./app
 
+# --- CORREÇÃO DEFINITIVA ---
+# 1. Garante que todos os scripts no venv sejam executáveis (mesmo para root)
+RUN chmod -R +x /app/.venv/bin
+
 # Expõe a porta
 EXPOSE 8000
 
-# Comando de execução
-CMD ["/bin/sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# 2. Alterado para 'python -m uvicorn'
+# Isso contorna problemas de permissão no script 'uvicorn' direto, 
+# pois usa o binário do python que já é confiável.
+CMD ["/bin/sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
