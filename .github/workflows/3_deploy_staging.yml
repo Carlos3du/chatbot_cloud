@@ -45,7 +45,7 @@ jobs:
     
     # Chama o arquivo do workflow receptor.
     # O caminho deve ser EXATO a partir da raiz do repositório.
-    uses: ./.github/workflows/validation_production_merge.yml
+    uses: ./.github/workflows/validation_production.yml
     
     # Passa todos os secrets necessários (API_KEY, Tokens, URLs) para o receptor
     secrets: inherit
