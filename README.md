@@ -4,3 +4,4 @@ Projeto da faculdade de cloud
 - teste staging
 - teste deploy staging
 - teste validation production 2
+- teste staging 1
