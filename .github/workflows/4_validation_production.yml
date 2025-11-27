@@ -1,16 +1,12 @@
 name: Validation & Production Merge
 
 on:
-  # O PULO DO GATO:
-  # Este gatilho "escuta" o término do workflow chamado "Deploy to Staging".
-  # O nome em 'workflows' DEVE ser idêntico ao 'name:' do arquivo deploy_staging.yml
-  workflow_run:
-    workflows: ["Deploy to Staging"]
-    branches: [staging]
-    types:
-      - completed
+  # 1. Permite que este workflow seja chamado por outro (o Deploy)
+  workflow_call:
+    # Se precisar de inputs específicos, define-se aqui.
+    # Segredos são herdados automaticamente se usar 'secrets: inherit' no chamador.
 
-  # Mantemos o dispatch para você poder rodar manualmente se precisar testar
+  # 2. Permite rodar manualmente para testes
   workflow_dispatch:
 
 permissions:
@@ -22,15 +18,12 @@ jobs:
   validation:
     name: Integration and Functional Tests
     runs-on: ubuntu-latest
-    # IMPORTANTE: Só roda se o Deploy de Staging foi SUCESSO.
-    # Sem isso, ele rodaria mesmo se o deploy quebrasse.
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
-      - name: Checkout code
+      - name: Checkout Staging Code
         uses: actions/checkout@v4
         with:
-          # Garante que estamos pegando a versão exata que acabou de ser deployada na staging
+          # Garante que estamos validando a branch staging
           ref: staging
           fetch-depth: 0
       
@@ -50,12 +43,12 @@ jobs:
       
       - name: Run integration tests
         env:
+          # Estes secrets vêm do workflow 'Deploy Staging' via (secrets: inherit)
           STAGING_URL: ${{ secrets.STAGING_URL }}
           RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
-          echo "🧪 Iniciando testes de integração contra Staging..."
-          # O deploy acabou de acontecer, então estamos testando a versão nova
+          echo "🧪 Iniciando testes de integração..."
           uv run pytest tests/integration -v
 
   create-production-pr:
@@ -65,7 +58,7 @@ jobs:
     if: success()
     
     steps:
-      - name: Checkout code
+      - name: Checkout Staging Code
         uses: actions/checkout@v4
         with:
           ref: staging
@@ -80,32 +73,12 @@ jobs:
             --base main \
             --head staging \
             --title "🚀 Auto PR: Staging -> Main (Deploy Validado)" \
-            --body "## 🚢 Merge to Production (Main)
+            --body "## 🚢 Merge to Production
             
             ✅ **Ciclo de Validação de Staging Completo**
             
-            Este PR foi gerado automaticamente após:
-            1. Deploy automático em Staging (Sucesso)
-            2. Testes de Integração na API rodando (Sucesso)
-            
-            ### 📊 Resultados dos Testes
-            - Integração: ✅ Passou
-            - Deploy Staging: ✅ Estável
-            
-            **Próximo Passo:**
-            - Revisão Humana Obrigatória
-            - Merge para iniciar Deploy em Produção" \
+            Este PR foi gerado automaticamente pelo pipeline.
+            - Testes de Integração: OK
+            - Deploy Staging: OK" \
             --assignee ${{ github.actor }} \
-            || echo "⚠️ Aviso: Um PR de staging para main já existe ou não há mudanças. Nenhuma ação necessária."
-      
-  notify-failure:
-    name: Notify Validation Failure
-    needs: [validation]
-    runs-on: ubuntu-latest
-    if: failure()
-    
-    steps:
-      - name: Send notification
-        run: |
-          echo "❌ FALHA CRÍTICA: A validação do ambiente de Staging falhou."
-          echo "O Deploy para Produção foi cancelado/bloqueado."
+            || echo "⚠️ Aviso: PR já existe."
