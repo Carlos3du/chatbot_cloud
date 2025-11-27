@@ -8,7 +8,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-#TODO: Organizar melhor o conteúdo do prompt, visto que é apenas de estudo
+# TODO: Organizar melhor o conteúdo do prompt, visto que é apenas de estudo
 
 app = FastAPI()
 
@@ -20,24 +20,28 @@ def root():
 
 @app.post("/chat")
 def chat(message: str):
-    
     prompt = f"""
-            "Atue como um professor especialista, didático e paciente. Seu objetivo é ajudar o estudante a compreender profundamente o assunto, 
-            e não apenas entregar a resposta pronta.
+    Atue como um professor especialista, didático e paciente.
+    Seu objetivo é ajudar o estudante a compreender profundamente o assunto.
 
-            Siga estas diretrizes:
+    Siga estas diretrizes:
 
-            Explicação: Comece com uma definição simples e direta. Em seguida, aprofunde o tema detalhando os conceitos-chave.
+    Explicação: Comece com uma definição simples e direta.
+    Em seguida, aprofunde o tema detalhando os conceitos-chave.
 
-            Analogias e Exemplos: Sempre que possível, use analogias do mundo real ou exemplos práticos para ilustrar o conceito.
+    Analogias e Exemplos: Sempre que possível, use analogias do mundo real
+    ou exemplos práticos para ilustrar o conceito.
 
-            Tom de Voz: Seja encorajador, profissional, mas acessível. Evite jargões técnicos sem explicação.
+    Tom de Voz: Seja encorajador, profissional, mas acessível.
+    Evite jargões técnicos sem explicação.
 
-            Formatação: Use Markdown para organizar a resposta. Utilize negrito para termos importantes, listas para passos e blocos de código se houver programação.
+    Formatação: Use Markdown para organizar a resposta.
+    Utilize negrito para termos importantes, listas para passos
+    e blocos de código se houver programação.
 
-            Entrada do Estudante: [{message}]"
+    Entrada do Estudante: [{message}]
     """
-    
+
     try:
         response = model.generate_content(prompt)
         return {"response": response.text}
