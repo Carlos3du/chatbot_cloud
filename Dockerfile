@@ -1,53 +1,36 @@
 # ---------------------------
-# Estágio 1: Builder (Compilação e Dependências)
+# Dockerfile Estável (Single Stage / System Install)
 # ---------------------------
-# Usamos uma versão slim estável
-FROM python:3.12-slim AS builder
-
-# Instalar o uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
-
-# Configurações do uv para otimização
-ENV UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
-
-WORKDIR /app
-
-# Copiar apenas arquivos de dependência para aproveitar o cache do Docker
-COPY pyproject.toml uv.lock* ./
-
-# Criar ambiente virtual e instalar dependências
-RUN uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv pip install -r pyproject.toml
-
-# ---------------------------
-# Estágio 2: Runtime (Imagem Final Leve)
-# ---------------------------
+# Usamos a imagem slim direta para garantir compatibilidade total
 FROM python:3.12-slim
 
-# Variáveis de ambiente para produção
+# Instalar o uv (gerenciador ultrarrápido)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Variáveis de ambiente
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    # Adiciona o venv ao PATH para que o python/uvicorn seja encontrado automaticamente
-    PATH="/app/.venv/bin:$PATH"
+    # Compilação para acelerar o startup
+    UV_COMPILE_BYTECODE=1
 
 WORKDIR /app
 
-# Copiar o ambiente virtual do estágio builder
-COPY --from=builder /app/.venv /app/.venv
+# Copiar arquivos de dependência
+COPY pyproject.toml uv.lock* ./
+
+# --- MUDANÇA PRINCIPAL ---
+# Instalação direta no sistema (--system).
+# Eliminamos a criação de .venv e a cópia entre estágios.
+# Isso garante que o binário 'uvicorn' seja instalado em /usr/local/bin
+# com as permissões corretas de execução nativas do Linux.
+RUN uv pip install --system -r pyproject.toml
 
 # Copiar o código da aplicação
 COPY ./app ./app
 
-# --- CORREÇÃO DEFINITIVA ---
-# 1. Garante que todos os scripts no venv sejam executáveis (mesmo para root)
-RUN chmod -R +x /app/.venv/bin
-
 # Expõe a porta
 EXPOSE 8000
 
-# 2. Alterado para 'python -m uvicorn'
-# Isso contorna problemas de permissão no script 'uvicorn' direto, 
-# pois usa o binário do python que já é confiável.
-CMD ["/bin/sh", "-c", "python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Comando de execução
+# Como instalamos no sistema, o uvicorn estará no PATH global automaticamente.
+CMD ["/bin/sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
