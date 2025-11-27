@@ -8,13 +8,10 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      # 1. Correção Crítica: Alinhado com Dockerfile (3.12)
-      # Evita discrepância entre o ambiente de CI e a imagem final
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -26,19 +23,29 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Install dependencies with UV
+      - name: Install dependencies
         run: uv sync --frozen
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway Staging
-        # O Railway usará o Dockerfile da raiz para fazer o build lá na infra deles
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_STAGING }} --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
-      - name: Deployment Triggered
-        run: |
-          echo "✅ Deploy iniciado com sucesso no Railway!"
-          echo "🔗 Acompanhe em: https://railway.app"
+      - name: Deployment Summary
+        run: echo "✅ Deploy finalizado. Iniciando o job de validação..."
+
+  # --- JOB DE CHAMADA (TRIGGER) ---
+  trigger-validation:
+    # Este job depende do sucesso do job 'deploy' acima
+    needs: deploy
+    if: success()
+    
+    # Chama o arquivo do workflow receptor.
+    # O caminho deve ser EXATO a partir da raiz do repositório.
+    uses: ./.github/workflows/validation_production_merge.yml
+    
+    # Passa todos os secrets necessários (API_KEY, Tokens, URLs) para o receptor
+    secrets: inherit
