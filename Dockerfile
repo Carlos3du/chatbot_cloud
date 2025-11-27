@@ -1,7 +1,7 @@
 # ---------------------------
 # Estágio 1: Builder (Compilação e Dependências)
 # ---------------------------
-# Usamos uma versão slim estável (ajuste para 3.14 se realmente tiver acesso à imagem)
+# Usamos uma versão slim estável
 FROM python:3.12-slim AS builder
 
 # Instalar o uv
@@ -14,11 +14,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 
 # Copiar apenas arquivos de dependência para aproveitar o cache do Docker
-# O asterisco em uv.lock* permite que o comando funcione mesmo se você não tiver o lock file ainda
 COPY pyproject.toml uv.lock* ./
 
 # Criar ambiente virtual e instalar dependências
-# Usamos o próprio venv para isolar as libs, facilitando a cópia para o próximo estágio
 RUN uv venv /app/.venv && \
     . /app/.venv/bin/activate && \
     uv pip install -r pyproject.toml
@@ -45,16 +43,15 @@ COPY --from=builder /app/.venv /app/.venv
 # Copiar o código da aplicação
 COPY ./app ./app
 
-# Ajustar permissões (opcional, mas boa prática se a app precisar escrever algo)
-RUN chown -R appuser:appuser /app
+# Ajustar permissões e garantir execução
+RUN chown -R appuser:appuser /app && \
+    chmod -R 755 /app/.venv/bin
 
 # Mudar para o usuário seguro
 USER appuser
 
-# Expõe a porta (documentação apenas)
+# Expõe a porta
 EXPOSE 8000
 
 # Comando de execução
-# Usamos shell form (/bin/sh -c) para garantir que a variável ${PORT} seja expandida corretamente
-# Se a variável PORT não estiver definida, usa 8000 como fallback
 CMD ["/bin/sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
