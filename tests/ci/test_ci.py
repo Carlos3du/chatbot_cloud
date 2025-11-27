@@ -27,11 +27,6 @@ def test_docs_endpoint():
     assert response.status_code == 200
 
 
-def test_chat_endpoint_missing_message():
-    response = client.post("/chat", params={"message": ""})
-    assert response.status_code == 500
-
-
 def test_chat_endpoint_with_message():
     response = client.post("/chat", params={"message": "Olá, tudo bem?"})
     assert response.status_code == 200

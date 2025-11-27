@@ -1,24 +1,36 @@
-# Usando uma imagem Python oficial como base
-FROM python:3.14-slim
+# ---------------------------
+# Dockerfile Estável (Single Stage / System Install)
+# ---------------------------
+# Usamos a imagem slim direta para garantir compatibilidade total
+FROM python:3.12-slim
 
-# Instalar uv - gerenciador de pacotes Python ultrarrápido
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Instalar o uv (gerenciador ultrarrápido)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Definir o diretório de trabalho
+# Variáveis de ambiente
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    # Compilação para acelerar o startup
+    UV_COMPILE_BYTECODE=1
+
 WORKDIR /app
 
-# Copiar arquivos de dependências
-COPY pyproject.toml ./
+# Copiar arquivos de dependência
+COPY pyproject.toml uv.lock* ./
 
-# Instalar dependências usando uv
+# --- MUDANÇA PRINCIPAL ---
+# Instalação direta no sistema (--system).
+# Eliminamos a criação de .venv e a cópia entre estágios.
+# Isso garante que o binário 'uvicorn' seja instalado em /usr/local/bin
+# com as permissões corretas de execução nativas do Linux.
 RUN uv pip install --system -r pyproject.toml
 
 # Copiar o código da aplicação
 COPY ./app ./app
 
-# Expor a porta que a aplicação irá rodar
+# Expõe a porta
 EXPOSE 8000
 
-# Comando para rodar a aplicação
-# Railway define a variável PORT automaticamente
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+# Comando de execução
+# Como instalamos no sistema, o uvicorn estará no PATH global automaticamente.
+CMD ["/bin/sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   test:
-    name: Test and Build
+    name: Test, Build and Verify
     runs-on: ubuntu-latest
     
     steps:
@@ -19,34 +19,65 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 1. Configurar Python 3.12 (IGUAL AO DOCKERFILE)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
 
+      # 2. Instalar e Configurar UV
       - name: Install UV
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Install dependencies with UV
+      # 3. Instalar dependências (rápido, usando cache)
+      - name: Install dependencies
         run: uv sync --frozen
 
+      # 4. Lint (Qualidade de Código)
       - name: Run Ruff Linter
         run: uv run ruff check .
 
+      # 5. Testes Unitários (Lógica)
+      # Aqui testamos a lógica do código Python puro
       - name: Run Tests
         env:
           API_KEY: ${{ secrets.API_KEY }}
         run: uv run pytest tests/ci/ -v
 
+      # 6. Build da Imagem Docker
+      # Aqui testamos se o empacotamento funciona
       - name: Build Docker Image
         run: docker build -t chatbot-cloud:test .
 
-      - name: Verify Docker Build
-        run: docker images chatbot-cloud:test
+      # 7. Smoke Test do Docker (NOVO E IMPORTANTE)
+      # Tenta subir o container por 10 segundos para ver se ele não quebra na inicialização.
+      # Isso pega erros como "biblioteca do sistema faltando" ou "permissão negada".
+      - name: Smoke Test Docker Image
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          docker run -d --name smoke-test \
+            -e API_KEY=$API_KEY \
+            -p 8000:8000 \
+            chatbot-cloud:test
+          
+          echo "⏳ Aguardando container iniciar..."
+          sleep 10
+          
+          if [ "$(docker inspect -f '{{.State.Running}}' smoke-test)" = "true" ]; then
+            echo "✅ Container iniciou e permaneceu rodando!"
+            docker logs smoke-test
+            docker rm -f smoke-test
+          else
+            echo "❌ Container falhou ao iniciar!"
+            docker logs smoke-test
+            exit 1
+          fi
 
+      # 8. Criação do PR (Só roda se tudo acima passar)
       - name: Create Pull Request to Staging
         if: success() && github.ref == 'refs/heads/dev' && github.event_name == 'push'
         env:
@@ -59,8 +90,8 @@ jobs:
             --body "## Automated Pull Request
             
             ✅ CI Pipeline passou com sucesso na branch \`dev\`
-            📦 Todos os testes passaram
-            🐳 Build Docker concluído
+            🧪 Testes Unitários: OK
+            🐳 Docker Build & Smoke Test: OK
             
             **Último commit:**
             \`${{ github.event.head_commit.message }}\`
@@ -71,6 +102,4 @@ jobs:
       - name: Notify Success
         if: success()
         run: |
-          echo "✅ CI Pipeline passou com sucesso!"
-          echo "📦 Todos os testes passaram"
-          echo "🐳 Build Docker concluído"
+          echo "✅ CI Pipeline concluído com sucesso!"

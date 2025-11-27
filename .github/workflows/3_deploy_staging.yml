@@ -8,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
 
       - name: Install UV
         uses: astral-sh/setup-uv@v3
@@ -24,7 +23,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Install dependencies with UV
+      - name: Install dependencies
         run: uv sync --frozen
 
       - name: Install Railway CLI
@@ -35,16 +34,18 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
-      - name: Deployment Triggered
-        run: |
-          echo "✅ Deploy iniciado com sucesso no Railway!"
-          echo "🔗 Acompanhe em: https://railway.app"
+      - name: Deployment Summary
+        run: echo "✅ Deploy finalizado. Iniciando o job de validação..."
 
-  call-validation:
-    name: Trigger Validation
+  # --- JOB DE CHAMADA (TRIGGER) ---
+  trigger-validation:
+    # Este job depende do sucesso do job 'deploy' acima
     needs: deploy
     if: success()
+    
+    # Chama o arquivo do workflow receptor.
+    # O caminho deve ser EXATO a partir da raiz do repositório.
     uses: ./.github/workflows/4_validation_production.yml
-    secrets:
-      STAGING_URL: ${{ secrets.STAGING_URL }}
-      RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
+    
+    # Passa todos os secrets necessários (API_KEY, Tokens, URLs) para o receptor
+    secrets: inherit
