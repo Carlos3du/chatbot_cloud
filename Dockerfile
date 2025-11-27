@@ -34,21 +34,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Criar um usuário não-root por segurança
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# REMOVIDO: Criação de usuário appuser e ajustes de permissão complexos.
+# Rodaremos como ROOT para garantir acesso total aos arquivos e evitar "Permission denied".
 
 # Copiar o ambiente virtual do estágio builder
 COPY --from=builder /app/.venv /app/.venv
 
 # Copiar o código da aplicação
 COPY ./app ./app
-
-# Ajustar permissões e garantir execução
-RUN chown -R appuser:appuser /app && \
-    chmod -R 755 /app/.venv/bin
-
-# Mudar para o usuário seguro
-USER appuser
 
 # Expõe a porta
 EXPOSE 8000
