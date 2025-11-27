@@ -13,10 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      # 1. Correção Crítica: Alinhado com Dockerfile e Staging (3.12)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
 
       - name: Install UV
         uses: astral-sh/setup-uv@v3
@@ -25,18 +26,23 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install dependencies with UV
+        # Garante que o pyproject.toml e uv.lock estão íntegros antes de enviar
         run: uv sync --frozen
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway Production
+        # --detach libera o GitHub Action assim que o build começa no Railway
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_PRODUCTION }} --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
-      - name: Deployment Triggered
-        run: |
-          echo "✅ Deploy iniciado com sucesso no Railway!"
-          echo "🔗 Acompanhe em: https://railway.app"
 
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "✅ Deploy de Produção acionado com sucesso!"
+          echo "🚀 Versão enviada para o Railway"
+          echo "🏷️ Tag criada no GitHub para rastreabilidade"

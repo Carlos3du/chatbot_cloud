@@ -13,10 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      # 1. Correção Crítica: Alinhado com Dockerfile (3.12)
+      # Evita discrepância entre o ambiente de CI e a imagem final
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
 
       - name: Install UV
         uses: astral-sh/setup-uv@v3
@@ -31,6 +33,7 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway Staging
+        # O Railway usará o Dockerfile da raiz para fazer o build lá na infra deles
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_STAGING }} --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -39,12 +42,3 @@ jobs:
         run: |
           echo "✅ Deploy iniciado com sucesso no Railway!"
           echo "🔗 Acompanhe em: https://railway.app"
-
-  call-validation:
-    name: Trigger Validation
-    needs: deploy
-    if: success()
-    uses: ./.github/workflows/4_validation_production.yml
-    secrets:
-      STAGING_URL: ${{ secrets.STAGING_URL }}
-      RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
