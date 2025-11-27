@@ -1,9 +1,17 @@
 name: Validation & Production Merge
 
 on:
-  pull_request:
-    branches: [main]
-  
+  # O PULO DO GATO:
+  # Este gatilho "escuta" o término do workflow chamado "Deploy to Staging".
+  # O nome em 'workflows' DEVE ser idêntico ao 'name:' do arquivo deploy_staging.yml
+  workflow_run:
+    workflows: ["Deploy to Staging"]
+    branches: [staging]
+    types:
+      - completed
+
+  # Mantemos o dispatch para você poder rodar manualmente se precisar testar
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,16 +22,18 @@ jobs:
   validation:
     name: Integration and Functional Tests
     runs-on: ubuntu-latest
-    
+    # IMPORTANTE: Só roda se o Deploy de Staging foi SUCESSO.
+    # Sem isso, ele rodaria mesmo se o deploy quebrasse.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # Garante que estamos pegando a versão exata que acabou de ser deployada na staging
           ref: staging
           fetch-depth: 0
       
-      # 1. Padronização Python 3.12
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -38,16 +48,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
       
-      # 2. Testes de Integração contra o ambiente de Staging REAL
       - name: Run integration tests
         env:
-          # URLs e Chaves necessárias para bater na API de Staging
           STAGING_URL: ${{ secrets.STAGING_URL }}
           RAILWAY_SERVICE_STAGING: ${{ secrets.RAILWAY_SERVICE_STAGING }}
           API_KEY: ${{ secrets.API_KEY }}
         run: |
           echo "🧪 Iniciando testes de integração contra Staging..."
-          # Assume que seus testes de integração usam requests para a URL externa
+          # O deploy acabou de acontecer, então estamos testando a versão nova
           uv run pytest tests/integration -v
 
   create-production-pr:
@@ -88,7 +96,7 @@ jobs:
             - Revisão Humana Obrigatória
             - Merge para iniciar Deploy em Produção" \
             --assignee ${{ github.actor }} \
-            || echo "⚠️ Aviso: Um PR de staging para main já existe. Nenhuma ação necessária."
+            || echo "⚠️ Aviso: Um PR de staging para main já existe ou não há mudanças. Nenhuma ação necessária."
       
   notify-failure:
     name: Notify Validation Failure
@@ -101,4 +109,3 @@ jobs:
         run: |
           echo "❌ FALHA CRÍTICA: A validação do ambiente de Staging falhou."
           echo "O Deploy para Produção foi cancelado/bloqueado."
-          # Aqui você poderia adicionar notificação para Slack/Discord/Email
