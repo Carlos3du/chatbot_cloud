@@ -8,7 +8,6 @@ load_dotenv()
 genai.configure(api_key=os.getenv("API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
 
-# TODO: Organizar melhor o conteúdo do prompt, visto que é apenas de estudo
 
 app = FastAPI()
 
