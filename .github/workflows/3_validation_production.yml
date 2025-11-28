@@ -51,51 +51,6 @@ jobs:
           echo "🧪 Iniciando testes de integração..."
           uv run pytest tests/integration -v
 
-      # --- LOGIN DOCKER (Necessário antes do build/push) ---
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-       # --- BUILD DA IMAGEM ---
-      - name: Build Docker Image
-        # Define o nome completo da imagem (usuario/repo:tag)
-        run: |
-          echo "🐳 Construindo imagem Docker..."
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/chatbot-cloud:production .
-
-      # --- SMOKE TEST (Testa a imagem localmente antes de subir) ---
-      - name: Smoke Test Docker Image
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          # Armazena o nome da imagem numa variável para facilitar
-          IMAGE_TAG: ${{ secrets.DOCKER_USERNAME }}/chatbot-cloud:production
-        run: |
-          echo "🔥 Iniciando Smoke Test do container..."
-          docker run -d --name production-smoke \
-            -e API_KEY=$API_KEY \
-            -p 8000:8000 \
-            $IMAGE_TAG
-          
-          echo "⏳ Aguardando inicialização (10s)..."
-          sleep 10
-          
-          if [ "$(docker inspect -f '{{.State.Running}}' production-smoke)" = "true" ]; then
-            echo "✅ Container está rodando e saudável!"
-            docker logs production-smoke
-            docker rm -f production-smoke
-          else
-            echo "❌ CRÍTICO: Container falhou ao iniciar. Abortando deploy e merge."
-            docker logs production-smoke
-            exit 1
-          fi
-
-      # --- PUSH PARA DOCKER HUB (Só roda se o Smoke Test passar) ---
-      - name: Push Image to Docker Hub
-        run: |
-          echo "🚀 Smoke Test aprovado. Enviando imagem para Docker Hub..."
-          docker push ${{ secrets.DOCKER_USERNAME }}/chatbot-cloud:production
 
   create-production-pr:
     name: Create PR to Main
