@@ -4,3 +4,5 @@ Projeto da faculdade de cloud
 - teste staging
 - teste deploy staging
 - teste validation production 3
+- teste image docker
+
