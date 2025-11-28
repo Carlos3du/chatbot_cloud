@@ -36,6 +36,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
+        # --- LOGIN DOCKER (Necessário antes do build/push) ---
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       # 4. Lint (Qualidade de Código)
       - name: Run Ruff Linter
         run: uv run ruff check .
