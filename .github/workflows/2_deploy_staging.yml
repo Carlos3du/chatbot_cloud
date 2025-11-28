@@ -7,6 +7,7 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to Railway
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -26,26 +27,28 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
+      # Instala o CLI do Railway via NPM (Node já vem no ubuntu-latest)
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
       - name: Deploy to Railway Staging
+        # --detach libera o terminal assim que o build começa no Railway
+        # Se quiser esperar o deploy terminar para só então validar, remova o --detach
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_STAGING }} --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       
       - name: Deployment Summary
-        run: echo "✅ Deploy finalizado. Iniciando o job de validação..."
+        run: echo "✅ Deploy enviado para o Railway via CLI. Iniciando validação..."
 
   # --- JOB DE CHAMADA (TRIGGER) ---
   trigger-validation:
-    # Este job depende do sucesso do job 'deploy' acima
-    needs: deploy
-    if: success()
+    name: Call Validation Workflow
+    needs: deploy        # Só roda se o deploy funcionar
+    if: success()        # Garante que não roda se o deploy falhar
     
     # Chama o arquivo do workflow receptor.
-    # O caminho deve ser EXATO a partir da raiz do repositório.
     uses: ./.github/workflows/3_validation_production.yml
     
-    # Passa todos os secrets necessários (API_KEY, Tokens, URLs) para o receptor
+    # Passa todos os secrets (RAILWAY_TOKEN, API_KEY, etc) para o próximo arquivo
     secrets: inherit
