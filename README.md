@@ -6,6 +6,21 @@ O projeto se destaca por sua esteira de **DevOps robusta**, utilizando contêine
 
 -----
 
+## 📋 Adaptação da Arquitetura (AWS vs. Solução Adotada)
+
+Para este projeto, adaptamos a arquitetura de referência da AWS para um cenário ágil e moderno utilizando **Railway** e **GitHub Actions**, mantendo os requisitos funcionais e de segurança.
+
+| Requisito Original (AWS) | Solução Adotada | Descrição da Implementação |
+| :--- | :--- | :--- |
+| **CodeCommit** | **GitHub** | Utilizamos o GitHub como nosso repositório de controle de versão, garantindo histórico completo, gestão de branches e revisão de código via Pull Requests. |
+| **ECR** (Registry) | **Docker Hub** | No lugar do Elastic Container Registry, utilizamos o Docker Hub. Nossos workflows de CI/CD autenticam e enviam as imagens tagueadas como `staging` e `production` para este registro público/privado. |
+| **ECS** (Orquestração) | **Railway** | O Railway atua como nosso orquestrador de containers, substituindo o ECS. Ele gerencia o ciclo de vida da aplicação, escalabilidade e reinicia o serviço automaticamente em caso de falhas. |
+| **IAM** (Segurança) | **Secrets & Env Vars** | A gestão de permissões é feita através de Secrets criptografados no GitHub Actions e Variáveis de Ambiente no Railway, garantindo que chaves sensíveis (como a API Key do Gemini) nunca fiquem expostas no código. |
+| **IP Público** | **Domínio Railway** | O serviço é exposto publicamente via domínio seguro (HTTPS) gerado e gerenciado automaticamente pelo Railway (`*.up.railway.app`), permitindo acesso externo controlado para a API. |
+
+
+-----
+
 ## 🏗️ Arquitetura do Projeto
 
 O sistema foi projetado seguindo práticas modernas de Cloud Native e GitOps.
