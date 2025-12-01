@@ -28,9 +28,6 @@ RUN uv pip install --system -r pyproject.toml
 # Copiar o código da aplicação
 COPY ./app ./app
 
-COPY start.sh ./
-RUN chmod +x start.sh
-
 # Expõe a porta
 EXPOSE 8000
 
