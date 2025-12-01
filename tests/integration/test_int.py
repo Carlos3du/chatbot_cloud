@@ -1,5 +1,3 @@
-import os
-
 import httpx
 
 STAGING_URL = "http://localhost:8000/chat"
