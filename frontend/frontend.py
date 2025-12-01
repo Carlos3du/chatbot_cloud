@@ -10,7 +10,7 @@ def limpar_input():
 
 
 load_dotenv()
-API_url = os.getenv("API_url")
+API_url = "http://localhost:8000/chat"
 
 st.set_page_config(page_title="📚 IsCool GPT")
 
