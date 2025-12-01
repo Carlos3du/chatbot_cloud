@@ -45,7 +45,7 @@ with st.container(key="chat_output"):
                     if response.status_code == 200:
                         output = response.json()
 
-                        st.markdown("###💡 Resposta")
+                        st.markdown("### Resposta")
                         st.write(output["response"])
                     else:
                         st.error(f"Falha ao processar mensagem: {response.text}")
