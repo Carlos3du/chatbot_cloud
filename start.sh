@@ -1,3 +1,4 @@
+#!/bin/sh
 # Inicia o backend (FastAPI) em segundo plano (&)
 # Ajuste a porta se necessário. O backend roda internamente no container.
 uvicorn app.main:app --host 0.0.0.0 --port 8000 &
