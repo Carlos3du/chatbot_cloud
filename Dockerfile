@@ -27,6 +27,7 @@ RUN uv pip install --system -r pyproject.toml
 
 # Copiar o código da aplicação
 COPY ./app ./app
+COPY ./frontend ./frontend
 
 COPY start.sh ./
 RUN chmod +x start.sh
