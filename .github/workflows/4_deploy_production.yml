@@ -84,6 +84,7 @@ jobs:
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_PRODUCTION }} --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          API_url: ${{ secrets.API_url}}
       
 
 
