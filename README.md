@@ -191,5 +191,5 @@ chatbot_cloud/
 
 Desenvolvido por **Carlos Eduardo** como parte da avaliação de Cloud Computing.
 
-  * **Universidade:** [Nome da sua Faculdade]
+  * **Universidade:** CESAR School
   * **Curso:** Ciência da Computação
