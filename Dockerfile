@@ -27,10 +27,16 @@ RUN uv pip install --system -r pyproject.toml
 
 # Copiar o código da aplicação
 COPY ./app ./app
+COPY ./frontend ./frontend
+
+COPY start.sh ./
+RUN chmod +x start.sh
 
 # Expõe a porta
 EXPOSE 8000
+EXPOSE 8501
 
 # Comando de execução
 # Como instalamos no sistema, o uvicorn estará no PATH global automaticamente.
-CMD ["/bin/sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+#CMD ["/bin/sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["./start.sh"]
